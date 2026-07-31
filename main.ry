@@ -1,0 +1,78 @@
+import logging
+import requests
+
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+)
+
+# ============================
+# TELEGRAM TOKEN
+# ============================
+
+BOT_TOKEN = "8996509464:AAFb7pRFzLePYwYnosxozy7mnCpi2vnz0ZI"
+
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    level=logging.INFO,
+)
+
+COINS = {
+    "btc": "bitcoin",
+    "eth": "ethereum",
+    "sol": "solana",
+    "bnb": "binancecoin",
+    "xrp": "ripple",
+}
+
+# ============================
+# START
+# ============================
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    text = (
+        "🤖 Crypto Bot\n\n"
+        "Команды:\n"
+        "/price btc\n"
+        "/price eth\n"
+        "/price sol\n"
+        "/signal btc"
+    )
+
+    await update.message.reply_text(text)
+
+# ============================
+# PRICE
+# ============================
+
+async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not context.args:
+        await update.message.reply_text(
+            "Пример:\n/price btc"
+        )
+        return
+
+    coin = context.args[0].lower()
+
+    if coin not in COINS:
+        await update.message.reply_text(
+            "Монета не найдена."
+        )
+        return
+
+    url = (
+        "https://api.coingecko.com/api/v3/simple/price"
+        f"?ids={COINS[coin]}&vs_currencies=usd"
+    )
+
+    data = requests.get(url).json()
+
+    price = data[COINS[coin]]["usd"]
+
+    await update.message.reply_text(
+        f"💰 {coin.upper()} = ${price}"
+    )
