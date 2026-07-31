@@ -12,7 +12,8 @@ from telegram.ext import (
 # TELEGRAM BOT
 # ======================
 
-BOT_TOKEN = "8996509464:AAFb7pRFzLePYwYnosxozy7mnCpi2vnzОZI"
+BOT_TOKEN = "8996509464:AAHvRs8cswkHVCSUpqe1
+wsl1NzlVMJlwi4k"
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
