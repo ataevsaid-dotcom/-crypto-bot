@@ -14,7 +14,8 @@ from telegram.ext import (
 # CONFIG
 # ======================
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]   # токен больше не в коде!
+BOT_TOKEN = os.environ["
+8996509464:AAHKzTgBz2gXNbcPRet_1v1WsuD5wXzxW-w"]   # токен больше не в коде!
 CACHE_TTL = 60                        # секунд
 API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
