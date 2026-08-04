@@ -13,7 +13,7 @@ from telegram.ext import (
 # CONFIG
 # ======================
 
-BOT_TOKEN = "ВСТАВЬТЕ_ВАШ_ТОКЕН_СЮДА"
+BOT_TOKEN = "8996509464:AAEkrX-qoyTix2x1Vz5zGp_7uUFPHJ1aLQQ"
 CACHE_TTL = 60
 API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
