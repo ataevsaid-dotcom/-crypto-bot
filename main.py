@@ -1,7 +1,9 @@
 import logging
-import requests
+import os
+import time
 
-from telegram import Update
+import httpx
+from telegram import BotCommand, Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -9,14 +11,12 @@ from telegram.ext import (
 )
 
 # ======================
-# TELEGRAM BOT
+# CONFIG
 # ======================
 
-BOT_TOKEN = "8996509464:AAHvRs8cswkHVCSUpqe1wsl1NzlVMJIwi4k"
-logging.basicConfig(
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    level=logging.INFO,
-)
+BOT_TOKEN = os.environ["BOT_TOKEN"]   # токен больше не в коде!
+CACHE_TTL = 60                        # секунд
+API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
 COINS = {
     "btc": "bitcoin",
@@ -26,36 +26,68 @@ COINS = {
     "xrp": "ripple",
 }
 
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    level=logging.INFO,
+)
+
 # ======================
-# START
+# API + CACHE
+# ======================
+
+_cache: dict = {"time": 0.0, "data": None}
+
+
+async def get_prices() -> dict | None:
+    """Цены всех монет одним запросом, кэш на CACHE_TTL секунд."""
+    now = time.monotonic()
+    if _cache["data"] is not None and now - _cache["time"] < CACHE_TTL:
+        return _cache["data"]
+
+    params = {
+        "ids": ",".join(COINS.values()),
+        "vs_currencies": "usd",
+        "include_24hr_change": "true",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(API_URL, params=params)
+            response.raise_for_status()
+            data = response.json()
+        _cache["time"] = now
+        _cache["data"] = data
+        return data
+    except Exception as e:
+        logging.error("CoinGecko error: %s", e)
+        return _cache["data"]  # старые данные лучше, чем ничего
+
+
+def format_price(symbol: str, info: dict) -> str:
+    usd = info["usd"]
+    change = info.get("usd_24h_change")
+    if change is None:
+        return f"{symbol.upper()}: ${usd:,.2f}"
+    emoji = "📈" if change >= 0 else "📉"
+    return f"{symbol.upper()}: ${usd:,.2f} {emoji} {change:+.2f}% (24h)"
+
+
+# ======================
+# HANDLERS
 # ======================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "Привет! Я крипто-бот.\n\n"
+        "Привет! Я крипто-бот. 🤖\n\n"
         "Команды:\n"
         "/price btc — цена Bitcoin\n"
         "/price eth — цена Ethereum\n"
         "/price sol — цена Solana\n"
         "/price bnb — цена BNB\n"
         "/price xrp — цена XRP\n"
-        "/all — все цены сразу"
+        "/all — все цены сразу\n\n"
+        "Плюс показываю изменение за 24 часа 📈📉"
     )
     await update.message.reply_text(text)
-
-
-async def get_price(coin_id: str) -> float | None:
-    """Получает текущую цену в USD через CoinGecko"""
-    url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {"ids": coin_id, "vs_currencies": "usd"}
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data[coin_id]["usd"]
-    except Exception as e:
-        logging.error(f"Ошибка при получении цены {coin_id}: {e}")
-        return None
 
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,30 +105,49 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    price_usd = await get_price(coin_id)
-    if price_usd is None:
+    data = await get_prices()
+    info = (data or {}).get(coin_id)
+    if not info:
         await update.message.reply_text("Не удалось получить цену. Попробуй позже.")
         return
 
-    await update.message.reply_text(
-        f"{symbol.upper()}: ${price_usd:,.2f}"
-    )
+    await update.message.reply_text(format_price(symbol, info))
 
 
 async def all_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = await get_prices()
+    if not data:
+        await update.message.reply_text("Не удалось получить цены. Попробуй позже.")
+        return
+
     lines = []
     for symbol, coin_id in COINS.items():
-        price_usd = await get_price(coin_id)
-        if price_usd is not None:
-            lines.append(f"{symbol.upper()}: ${price_usd:,.2f}")
-        else:
-            lines.append(f"{symbol.upper()}: ошибка")
+        info = data.get(coin_id)
+        lines.append(format_price(symbol, info) if info else f"{symbol.upper()}: ошибка")
 
     await update.message.reply_text("\n".join(lines))
 
 
+# ======================
+# MAIN
+# ======================
+
+async def post_init(application: Application) -> None:
+    """Меню команд в клиентах Telegram."""
+    await application.bot.set_my_commands([
+        BotCommand("start", "запуск и справка"),
+        BotCommand("price", "цена монеты, напр. /price btc"),
+        BotCommand("all", "все цены сразу"),
+    ])
+
+
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("price", price))
