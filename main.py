@@ -19,7 +19,7 @@ from telegram.ext import (
 # CONFIG
 # ======================
 
-BOT_TOKEN = "8996509464:AAEkrX-qoyTix2x1Vz5zGp_7uUFPHJ1aLQQ"
+BOT_TOKEN ="8996509464:AAEkrX-qoyTix2x1Vz5zGp_7uUFPHJ1aLQQ"
 CACHE_TTL = 60
 API_URL = "https://api.coingecko.com/api/v3/simple/price"
 CHART_URL = "https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
