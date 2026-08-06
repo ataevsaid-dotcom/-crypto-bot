@@ -508,7 +508,7 @@ async def post_shutdown(app: Application):
 # ======================
 
 def main():
-    token = os.environ.get("BOT_TOKEN")
+    token = os.environ.get("")
     if not token:
         raise SystemExit(
             "Переменная окружения BOT_TOKEN не задана. "
