@@ -1,19 +1,24 @@
+name: run-bot
+
+on:
+  workflow_dispatch:
+
 jobs:
   run-bot:
-    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - name: Set up job
-        run: echo "Job started"
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: pip install -r requirements.txt
+
       - name: Run bot
-        run: python bot.py
+        run: python main.py
         env:
-          BOT_TOKEN: \${{ secrets.BOT_TOKEN }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
